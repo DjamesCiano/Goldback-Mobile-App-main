@@ -583,88 +583,100 @@ const fitToCoordinates = (
               </Pressable>
             </Pressable>
                 <MapView
-                 provider="google" 
-                  ref={mapRef}
-                  // key={mapKey}
-                  style={StyleSheet.absoluteFill}
-                  initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
-                  onMapReady={() => {
-                    if (!mapIsLoaded) {
-                      setMapIsLoaded(true);
-                    }
-                    if (mapFindLocations.length) {
-                      fitToCoordinates(mapFindLocations, mapGroupedLocations);
-                    }
-                  }}
-                  onRegionChangeComplete={async (newRegion) => {
-                    setLastMapRegion(newRegion); // Save the last region
-                    if (ignoreNextRegionChangeRef.current) {
-                      ignoreNextRegionChangeRef.current = false;
-                      return;
-                    }
-                    if (!userInteractedRef.current) {
-                      userInteractedRef.current = true;
-                      lastLoadedRegionRef.current = newRegion;
-                      return;
-                    }
-                    // Only reload if region changed significantly
-                    if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
-                      return;
-                    }
-                    lastLoadedRegionRef.current = newRegion;
-                    try {
-                      setGlobalLoader(true);
-                      const response = await findMapLocations({
-                        latitude: newRegion.latitude,
-                        longitude: newRegion.longitude,
-                        radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
-                        zipCodes: search,
-                      });
-                      if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
-                        Alert.alert(`${response.notes}`);
-                        return;
-                      }
-                      if (response.code !== 0) {
-                        Alert.alert(
-                          `There was a problem with the request...: ${response.errorMessage}`
-                        );
-                        return;
-                      }
-                      if (!response.payload) {
-                        Alert.alert("No locations were found...");
-                        return;
-                      }
-                      setMapFindLocations(
-                        response.payload.singleLocations.filter(
-                          (location) => location.latitude && location.longitude
-                        )
-                      );
-                      setMapGroupedLocations(response.payload.groupedLocations);
-                    } catch (error) {
-                      console.log(error);
-                    } finally {
-                      setGlobalLoader(false);
-                    }
-                  }}
-                >
-              {memoizedLocations.map((location) => (
-                <ImageMarker
-                  key={`${location._id}-${location.latitude}-${location.longitude}`}
-                  latitude={location.latitude}
-                  longitude={location.longitude}
-                  onPress={() => onMarkerPress(location)}
-                />
-              ))}
-              {memoizedGroupedLocations.map((location, index) => (
-                <ImageMarker
-                  key={`${index}-${location.latitude}-${location.longitude}`}
-                  latitude={location.latitude}
-                  longitude={location.longitude}
-                  onPress={() => onPressGroupMarker(location)}
-                  type="group"
-                />
-              ))}
-            </MapView>
+  ref={mapRef}
+  style={{ flex: 1 }}
+  mapType="standard"
+  provider="google"  // 👈 Force Google Maps provider (important for Android)
+  initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
+  onMapReady={() => {
+    if (!mapIsLoaded) {
+      setMapIsLoaded(true);
+    }
+    if (mapFindLocations.length) {
+      fitToCoordinates(mapFindLocations, mapGroupedLocations);
+    }
+  }}
+  onRegionChangeComplete={async (newRegion) => {
+    setLastMapRegion(newRegion);
+
+    if (ignoreNextRegionChangeRef.current) {
+      ignoreNextRegionChangeRef.current = false;
+      return;
+    }
+
+    if (!userInteractedRef.current) {
+      userInteractedRef.current = true;
+      lastLoadedRegionRef.current = newRegion;
+      return;
+    }
+
+    // Only reload if region changed significantly
+    if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
+      return;
+    }
+
+    lastLoadedRegionRef.current = newRegion;
+
+    try {
+      setGlobalLoader(true);
+
+      const response = await findMapLocations({
+        latitude: newRegion.latitude,
+        longitude: newRegion.longitude,
+        radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
+        zipCodes: search,
+      });
+
+      if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
+        Alert.alert(`${response.notes}`);
+        return;
+      }
+
+      if (response.code !== 0) {
+        Alert.alert(`There was a problem with the request...: ${response.errorMessage}`);
+        return;
+      }
+
+      if (!response.payload) {
+        Alert.alert("No locations were found...");
+        return;
+      }
+
+      setMapFindLocations(
+        response.payload.singleLocations.filter(
+          (location) => location.latitude && location.longitude
+        )
+      );
+      setMapGroupedLocations(response.payload.groupedLocations);
+    } catch (error) {
+      console.log("Map fetch error:", error);
+    } finally {
+      setGlobalLoader(false);
+    }
+  }}
+>
+  {/* Render single location markers */}
+  {memoizedLocations.map((location) => (
+    <ImageMarker
+      key={`${location._id}-${location.latitude}-${location.longitude}`}
+      latitude={location.latitude}
+      longitude={location.longitude}
+      onPress={() => onMarkerPress(location)}
+    />
+  ))}
+
+  {/* Render grouped markers */}
+  {memoizedGroupedLocations.map((location, index) => (
+    <ImageMarker
+      key={`${index}-${location.latitude}-${location.longitude}`}
+      latitude={location.latitude}
+      longitude={location.longitude}
+      onPress={() => onPressGroupMarker(location)}
+      type="group"
+    />
+  ))}
+</MapView>
+
             <View
               style={{
                 ...styles.commonContainerSearch,

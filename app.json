@@ -60,7 +60,8 @@
           "locationAlwaysPermission": "Turning on location services allows us to show you where merchants are located near you.",
           "locationWhenInUsePermission": "Turning on location services allows us to show you where merchants are located near you."
         }
-      ]
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true
