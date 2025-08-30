@@ -583,7 +583,7 @@ const fitToCoordinates = (
                 />
               </Pressable>
             </Pressable>
-                <MapView
+              <MapView
                 ref={mapRef}
                 style={{ flex: 1 }}
                 mapType="standard"
@@ -591,41 +591,103 @@ const fitToCoordinates = (
                 initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
                 onMapReady={() => {
                   if (!mapIsLoaded) {
-                  setMapIsLoaded(true);
-                  console.log("Map ready");
+                    setMapIsLoaded(true);
+                    console.log("Map ready");
                   }
+                  // Commented out to prevent auto-fit after pan/zoom
+                  // if (mapFindLocations.length) {
+                  //   fitToCoordinates(mapFindLocations, mapGroupedLocations);
+                  //   console.log("[Map] Fitted to coordinates");
+                  // }
                 }}
                 onRegionChangeComplete={async (newRegion) => {
+                  console.log("[Map] Region changed to:", newRegion);
+
                   setLastMapRegion(newRegion);
 
-                  // Remove auto-fit logic here so user zoom/pan is respected
+                  // Commented out to prevent auto-fetch on pan/zoom
                   // if (ignoreNextRegionChangeRef.current) {
+                  //   console.log("[Map] Ignoring region change");
                   //   ignoreNextRegionChangeRef.current = false;
                   //   return;
                   // }
 
-                  lastLoadedRegionRef.current = newRegion;
+                  // Commented out to prevent auto-fetch on pan/zoom
+                  // if (!userInteractedRef.current) {
+                  //   console.log("[Map] First user interaction");
+                  //   userInteractedRef.current = true;
+                  //   lastLoadedRegionRef.current = newRegion;
+                  //   return;
+                  // }
+
+                  // Commented out to prevent auto-fetch on pan/zoom
+                  // if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
+                  //   console.log("[Map] Region change not significant");
+                  //   return;
+                  // }
+
+                  // lastLoadedRegionRef.current = newRegion;
+
+                  // try {
+                  //   setGlobalLoader(true);
+                  //   console.log("[Map] Fetching locations...");
+
+                  //   const response = await findMapLocations({
+                  //     latitude: newRegion.latitude,
+                  //     longitude: newRegion.longitude,
+                  //     radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
+                  //     zipCodes: search,
+                  //   });
+
+                  //   if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
+                  //     Alert.alert(`${response.notes}`);
+                  //     return;
+                  //   }
+
+                  //   if (response.code !== 0) {
+                  //     Alert.alert(`There was a problem with the request: ${response.errorMessage}`);
+                  //     return;
+                  //   }
+
+                  //   if (!response.payload) {
+                  //     Alert.alert("No locations were found...");
+                  //     return;
+                  //   }
+
+                  //   setMapFindLocations(
+                  //     response.payload.singleLocations.filter(
+                  //       (location) => location.latitude && location.longitude
+                  //     )
+                  //   );
+                  //   setMapGroupedLocations(response.payload.groupedLocations);
+
+                  //   console.log("[Map] Locations updated");
+                  // } catch (error) {
+                  //   console.log("[Map] Fetch error:", error);
+                  // } finally {
+                  //   setGlobalLoader(false);
+                  // }
                 }}
-                >
+              >
                 {memoizedLocations.map((location) => (
                   <ImageMarker
-                  key={`${location._id}-${location.latitude}-${location.longitude}`}
-                  latitude={location.latitude}
-                  longitude={location.longitude}
-                  onPress={() => onMarkerPress(location)}
+                    key={`${location._id}-${location.latitude}-${location.longitude}`}
+                    latitude={location.latitude}
+                    longitude={location.longitude}
+                    onPress={() => onMarkerPress(location)}
                   />
                 ))}
 
                 {memoizedGroupedLocations.map((location, index) => (
                   <ImageMarker
-                  key={`${index}-${location.latitude}-${location.longitude}`}
-                  latitude={location.latitude}
-                  longitude={location.longitude}
-                  onPress={() => onPressGroupMarker(location)}
-                  type="group"
+                    key={`${index}-${location.latitude}-${location.longitude}`}
+                    latitude={location.latitude}
+                    longitude={location.longitude}
+                    onPress={() => onPressGroupMarker(location)}
+                    type="group"
                   />
                 ))}
-                </MapView>
+              </MapView>
 
             <View
               style={{
