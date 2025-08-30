@@ -6,8 +6,9 @@ import {
   StyleSheet,
   View,
   Alert,
+  Platform,
 } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import debounce from "lodash.debounce";
@@ -582,100 +583,107 @@ const fitToCoordinates = (
                 />
               </Pressable>
             </Pressable>
-                <MapView
-  ref={mapRef}
-  style={{ flex: 1 }}
-  mapType="standard"
-  provider="google"  // 👈 Force Google Maps provider (important for Android)
-  initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
-  onMapReady={() => {
-    if (!mapIsLoaded) {
-      setMapIsLoaded(true);
-    }
-    if (mapFindLocations.length) {
-      fitToCoordinates(mapFindLocations, mapGroupedLocations);
-    }
-  }}
-  onRegionChangeComplete={async (newRegion) => {
-    setLastMapRegion(newRegion);
+              <MapView
+                ref={mapRef}
+                style={{ flex: 1 }}
+                mapType="standard"
+                provider="google"
+                initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
+                onMapReady={() => {
+                if (!mapIsLoaded) {
+                  setMapIsLoaded(true);
+                  console.log("Map ready");
+                }
+                if (mapFindLocations.length) {
+                  fitToCoordinates(mapFindLocations, mapGroupedLocations);
+                  console.log("[Map] Fitted to coordinates");
+                }
+                }}
+                onRegionChangeComplete={async (newRegion) => {
+                console.log("[Map] Region changed to:", newRegion);
 
-    if (ignoreNextRegionChangeRef.current) {
-      ignoreNextRegionChangeRef.current = false;
-      return;
-    }
+                setLastMapRegion(newRegion);
 
-    if (!userInteractedRef.current) {
-      userInteractedRef.current = true;
-      lastLoadedRegionRef.current = newRegion;
-      return;
-    }
+                if (ignoreNextRegionChangeRef.current) {
+                  console.log("[Map] Ignoring region change");
+                  ignoreNextRegionChangeRef.current = false;
+                  return;
+                }
 
-    // Only reload if region changed significantly
-    if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
-      return;
-    }
+                if (!userInteractedRef.current) {
+                  console.log("[Map] First user interaction");
+                  userInteractedRef.current = true;
+                  lastLoadedRegionRef.current = newRegion;
+                  return;
+                }
 
-    lastLoadedRegionRef.current = newRegion;
+                if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
+                  console.log("[Map] Region change not significant");
+                  return;
+                }
 
-    try {
-      setGlobalLoader(true);
+                lastLoadedRegionRef.current = newRegion;
 
-      const response = await findMapLocations({
-        latitude: newRegion.latitude,
-        longitude: newRegion.longitude,
-        radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
-        zipCodes: search,
-      });
+                try {
+                  setGlobalLoader(true);
+                  console.log("[Map] Fetching locations...");
 
-      if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
-        Alert.alert(`${response.notes}`);
-        return;
-      }
+                  const response = await findMapLocations({
+                  latitude: newRegion.latitude,
+                  longitude: newRegion.longitude,
+                  radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
+                  zipCodes: search,
+                  });
 
-      if (response.code !== 0) {
-        Alert.alert(`There was a problem with the request...: ${response.errorMessage}`);
-        return;
-      }
+                  if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
+                  Alert.alert(`${response.notes}`);
+                  return;
+                  }
 
-      if (!response.payload) {
-        Alert.alert("No locations were found...");
-        return;
-      }
+                  if (response.code !== 0) {
+                  Alert.alert(`There was a problem with the request: ${response.errorMessage}`);
+                  return;
+                  }
 
-      setMapFindLocations(
-        response.payload.singleLocations.filter(
-          (location) => location.latitude && location.longitude
-        )
-      );
-      setMapGroupedLocations(response.payload.groupedLocations);
-    } catch (error) {
-      console.log("Map fetch error:", error);
-    } finally {
-      setGlobalLoader(false);
-    }
-  }}
->
-  {/* Render single location markers */}
-  {memoizedLocations.map((location) => (
-    <ImageMarker
-      key={`${location._id}-${location.latitude}-${location.longitude}`}
-      latitude={location.latitude}
-      longitude={location.longitude}
-      onPress={() => onMarkerPress(location)}
-    />
-  ))}
+                  if (!response.payload) {
+                  Alert.alert("No locations were found...");
+                  return;
+                  }
 
-  {/* Render grouped markers */}
-  {memoizedGroupedLocations.map((location, index) => (
-    <ImageMarker
-      key={`${index}-${location.latitude}-${location.longitude}`}
-      latitude={location.latitude}
-      longitude={location.longitude}
-      onPress={() => onPressGroupMarker(location)}
-      type="group"
-    />
-  ))}
-</MapView>
+                  setMapFindLocations(
+                  response.payload.singleLocations.filter(
+                    (location) => location.latitude && location.longitude
+                  )
+                  );
+                  setMapGroupedLocations(response.payload.groupedLocations);
+
+                  console.log("[Map] Locations updated");
+                } catch (error) {
+                  console.log("[Map] Fetch error:", error);
+                } finally {
+                  setGlobalLoader(false);
+                }
+                }}
+              >
+                {memoizedLocations.map((location) => (
+                <ImageMarker
+                  key={`${location._id}-${location.latitude}-${location.longitude}`}
+                  latitude={location.latitude}
+                  longitude={location.longitude}
+                  onPress={() => onMarkerPress(location)}
+                />
+                ))}
+
+                {memoizedGroupedLocations.map((location, index) => (
+                <ImageMarker
+                  key={`${index}-${location.latitude}-${location.longitude}`}
+                  latitude={location.latitude}
+                  longitude={location.longitude}
+                  onPress={() => onPressGroupMarker(location)}
+                  type="group"
+                />
+                ))}
+              </MapView>
 
             <View
               style={{
