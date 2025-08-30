@@ -583,107 +583,49 @@ const fitToCoordinates = (
                 />
               </Pressable>
             </Pressable>
-              <MapView
+                <MapView
                 ref={mapRef}
                 style={{ flex: 1 }}
                 mapType="standard"
                 provider="google"
                 initialRegion={!mapIsLoaded ? (lastMapRegion || region) : undefined}
                 onMapReady={() => {
-                if (!mapIsLoaded) {
+                  if (!mapIsLoaded) {
                   setMapIsLoaded(true);
                   console.log("Map ready");
-                }
-                if (mapFindLocations.length) {
-                  fitToCoordinates(mapFindLocations, mapGroupedLocations);
-                  console.log("[Map] Fitted to coordinates");
-                }
+                  }
                 }}
                 onRegionChangeComplete={async (newRegion) => {
-                console.log("[Map] Region changed to:", newRegion);
+                  setLastMapRegion(newRegion);
 
-                setLastMapRegion(newRegion);
+                  // Remove auto-fit logic here so user zoom/pan is respected
+                  // if (ignoreNextRegionChangeRef.current) {
+                  //   ignoreNextRegionChangeRef.current = false;
+                  //   return;
+                  // }
 
-                if (ignoreNextRegionChangeRef.current) {
-                  console.log("[Map] Ignoring region change");
-                  ignoreNextRegionChangeRef.current = false;
-                  return;
-                }
-
-                if (!userInteractedRef.current) {
-                  console.log("[Map] First user interaction");
-                  userInteractedRef.current = true;
                   lastLoadedRegionRef.current = newRegion;
-                  return;
-                }
-
-                if (!regionChangedSignificantly(newRegion, lastLoadedRegionRef.current)) {
-                  console.log("[Map] Region change not significant");
-                  return;
-                }
-
-                lastLoadedRegionRef.current = newRegion;
-
-                try {
-                  setGlobalLoader(true);
-                  console.log("[Map] Fetching locations...");
-
-                  const response = await findMapLocations({
-                  latitude: newRegion.latitude,
-                  longitude: newRegion.longitude,
-                  radiusInMeters: milesToMeters(appSettings.defaultSearchRadiusMiles),
-                  zipCodes: search,
-                  });
-
-                  if (response.code === DSMEnvelopeCodeEnum.API_FACADE_04020) {
-                  Alert.alert(`${response.notes}`);
-                  return;
-                  }
-
-                  if (response.code !== 0) {
-                  Alert.alert(`There was a problem with the request: ${response.errorMessage}`);
-                  return;
-                  }
-
-                  if (!response.payload) {
-                  Alert.alert("No locations were found...");
-                  return;
-                  }
-
-                  setMapFindLocations(
-                  response.payload.singleLocations.filter(
-                    (location) => location.latitude && location.longitude
-                  )
-                  );
-                  setMapGroupedLocations(response.payload.groupedLocations);
-
-                  console.log("[Map] Locations updated");
-                } catch (error) {
-                  console.log("[Map] Fetch error:", error);
-                } finally {
-                  setGlobalLoader(false);
-                }
                 }}
-              >
+                >
                 {memoizedLocations.map((location) => (
-                <ImageMarker
+                  <ImageMarker
                   key={`${location._id}-${location.latitude}-${location.longitude}`}
                   latitude={location.latitude}
                   longitude={location.longitude}
                   onPress={() => onMarkerPress(location)}
-                />
+                  />
                 ))}
 
                 {memoizedGroupedLocations.map((location, index) => (
-                <ImageMarker
+                  <ImageMarker
                   key={`${index}-${location.latitude}-${location.longitude}`}
                   latitude={location.latitude}
                   longitude={location.longitude}
                   onPress={() => onPressGroupMarker(location)}
                   type="group"
-                />
+                  />
                 ))}
-              </MapView>
+                </MapView>
 
             <View
               style={{
